@@ -278,13 +278,6 @@ namespace
         return (void*)h;
     }
 
-    // template<typename T>
-    // T* get_export(void *h, char const* name)
-    // {
-    //     void *f = ::GetProcAddress((HMODULE)h, name);
-    //     assert(f != nullptr);
-    //     return static_cast<T*>(f);
-    // }
 #else
     void *load_library(char_t const* path)
     {
@@ -292,12 +285,6 @@ namespace
         assert(h != nullptr);
         return h;
     }
-    // void *get_export(void *h, char const* name)
-    // {
-    //     void *f = dlsym(h, name);
-    //     assert(f != nullptr);
-    //     return f;
-    // }
 #endif
 
     template<typename T>
@@ -333,7 +320,7 @@ namespace
         get_delegate_fptr       = get_export<hostfxr_get_runtime_delegate_fn>(lib, "hostfxr_get_runtime_delegate");
         run_app_fptr            = get_export<hostfxr_run_app_fn>(lib, "hostfxr_run_app");
         close_fptr              = get_export<hostfxr_close_fn>(lib, "hostfxr_close");
-
+        
         return (init_for_config_fptr && get_delegate_fptr && close_fptr);
     }
     
