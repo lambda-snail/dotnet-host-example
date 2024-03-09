@@ -20,7 +20,7 @@
 #include <hostfxr.h>
 #include <nethost.h>
 
-#ifdef WINDOWS
+#ifdef _WIN32
 #include <Windows.h>
 
 #define STR(s) L ## s
@@ -54,14 +54,13 @@ namespace
     hostfxr_close_fn close_fptr;
 
     // Forward declarations
-    bool load_hostfxr(const char_t *app);
-    load_assembly_and_get_function_pointer_fn get_dotnet_load_assembly(const char_t *assembly);
-
-    int32_t run_component_example(const string_t& root_path);
-    int32_t run_app_example(const string_t& root_path);
+    bool load_hostfxr(char_t const* assembly_path);
+    load_assembly_and_get_function_pointer_fn get_dotnet_load_assembly(char_t const* config_path);
+    
+    int32_t run_component_example(string_t const& root_path);
 }
 
-#if defined(WINDOWS)
+#if defined(_WIN32)
 int32_t __cdecl wmain(int32_t argc, wchar_t *argv[])
 #else
 int32_t main(int32_t argc, char *argv[])
@@ -70,7 +69,7 @@ int32_t main(int32_t argc, char *argv[])
     // Get the current executable's directory
     // This sample assumes the managed assembly to load and its runtime configuration file are next to the host
     char_t host_path[MAX_PATH];
-#if WINDOWS
+#if _WIN32
     auto size = ::GetFullPathNameW(argv[0], sizeof(host_path) / sizeof(char_t), host_path, nullptr);
     assert(size != 0);
 #else
@@ -79,11 +78,6 @@ int32_t main(int32_t argc, char *argv[])
 #endif
 
     string_t root_path = host_path;
-
-   // _tprintf(TEXT("Full path: %s\n"), szDir);
-    
-    wprintf(L"Path: %25s\n", host_path);
-    
     auto pos = root_path.find_last_of(DIR_SEPARATOR);
     assert(pos != string_t::npos);
     root_path = root_path.substr(0, pos + 1);
@@ -108,7 +102,7 @@ namespace
     //         public static unsafe void TestFnPtr(delegate*<void> fn_from_cpp)
     // and it can be called like this: 
     //         fn_from_cpp();
-    void pass_fnptr_to_dotnet(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, const string_t dotnetlib_path, const char_t* dotnet_type, int& rc)
+    void pass_fnptr_to_dotnet(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, string_t const dotnetlib_path, char_t const* dotnet_type, int& rc)
     {
         typedef void (CORECLR_DELEGATE_CALLTYPE *send_callback_to_dotnet_fn)(void(*fn)());
         send_callback_to_dotnet_fn callback;
@@ -142,7 +136,7 @@ namespace
         return static_cast<double_t>(i) + .5;
     }
 
-    void pass_fnptr_to_dotnet_witharguments(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, const string_t dotnetlib_path, const char_t* dotnet_type, int& rc)
+    void pass_fnptr_to_dotnet_witharguments(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, string_t const dotnetlib_path, char_t const* dotnet_type, int& rc)
     {
         typedef void (CORECLR_DELEGATE_CALLTYPE *send_callback_to_dotnet_fn)(double_t(*fn)(int32_t));
         send_callback_to_dotnet_fn callback;
@@ -166,7 +160,7 @@ namespace
         callback(fn);
     }
     
-    int32_t run_component_example(const string_t& root_path)
+    int32_t run_component_example(string_t const& root_path)
     {
         //
         // STEP 1: Load HostFxr and get exported hosting functions
@@ -193,7 +187,6 @@ namespace
         const string_t dotnetlib_path = root_path + STR("DotNetLib.dll");
         const char_t *dotnet_type = STR("DotNetLib.Lib, DotNetLib");
         const char_t *dotnet_type_method = STR("Hello");
-        // <SnippetLoadAndGet>
         // Function pointer to managed delegate
         component_entry_point_fn hello = nullptr;
         int32_t rc = load_assembly_and_get_function_pointer(
@@ -203,7 +196,6 @@ namespace
             nullptr /*delegate_type_name*/,
             nullptr,
             (void**)&hello);
-        // </SnippetLoadAndGet>
         assert(rc == 0 && hello != nullptr && "Failure: load_assembly_and_get_function_pointer()");
 
         //
@@ -217,7 +209,6 @@ namespace
         
         for (int32_t i = 0; i < 3; ++i)
         {
-            // <SnippetCallManaged>
             lib_args args
             {
                 STR("from host!"),
@@ -225,7 +216,6 @@ namespace
             };
 
             hello(&args, sizeof(args));
-            // </SnippetCallManaged>
         }
 
         // Function pointer to managed delegate with non-default signature
@@ -275,40 +265,39 @@ namespace
 namespace
 {
     // Forward declarations
-    void *load_library(const char_t *);
-    void *get_export(void *, const char *);
+    void *load_library(char_t const*);
+    void *get_export(void *, char const*);
 
-#ifdef WINDOWS
-    void *load_library(const char_t *path)
+#ifdef _WIN32
+    void *load_library(char_t const* path)
     {
         HMODULE h = ::LoadLibraryW(path);
         assert(h != nullptr);
         return (void*)h;
     }
-    void *get_export(void *h, const char *name)
+    void *get_export(void *h, char const* name)
     {
         void *f = ::GetProcAddress((HMODULE)h, name);
         assert(f != nullptr);
         return f;
     }
 #else
-    void *load_library(const char_t *path)
+    void *load_library(char_t const* path)
     {
         void *h = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
         assert(h != nullptr);
         return h;
     }
-    void *get_export(void *h, const char *name)
+    void *get_export(void *h, char const* name)
     {
         void *f = dlsym(h, name);
         assert(f != nullptr);
         return f;
     }
 #endif
-
-    // <SnippetLoadHostFxr>
+    
     // Using the nethost library, discover the location of hostfxr and get exports
-    bool load_hostfxr(const char_t *assembly_path)
+    bool load_hostfxr(char_t const* assembly_path)
     {
         get_hostfxr_parameters params { sizeof(get_hostfxr_parameters), assembly_path, nullptr };
         // Pre-allocate a large buffer for the path to hostfxr
@@ -328,11 +317,9 @@ namespace
 
         return (init_for_config_fptr && get_delegate_fptr && close_fptr);
     }
-    // </SnippetLoadHostFxr>
-
-    // <SnippetInitialize>
+    
     // Load and initialize .NET Core and get desired function pointer for scenario
-    load_assembly_and_get_function_pointer_fn get_dotnet_load_assembly(const char_t *config_path)
+    load_assembly_and_get_function_pointer_fn get_dotnet_load_assembly(char_t const* config_path)
     {
         // Load .NET Core
         void *load_assembly_and_get_function_pointer = nullptr;
@@ -354,7 +341,6 @@ namespace
             std::cerr << "Get delegate failed: " << std::hex << std::showbase << rc << std::endl;
 
         close_fptr(cxt);
-        return (load_assembly_and_get_function_pointer_fn)load_assembly_and_get_function_pointer;
+        return static_cast<load_assembly_and_get_function_pointer_fn>(load_assembly_and_get_function_pointer);
     }
-    // </SnippetInitialize>
 }
