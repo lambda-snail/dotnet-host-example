@@ -23,7 +23,7 @@ In short, this can be achieved by declaring a method like so in c#:
 
 ```csharp
 [UnmanagedCallersOnly]
-public static unsafe void TestFnPtrWithArgs(delegate* unmanaged[MemberFunction]<int, double> fn_from_cpp) { ... }
+public static unsafe void TestFnPtrWithArgs(delegate* unmanaged<int, double> fn_from_cpp) { ... }
 ```
 
 This will provide the c# code with a delegate that it can use normally like this:
