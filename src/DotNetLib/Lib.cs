@@ -35,7 +35,7 @@ namespace DotNetLib
         }
         
         [UnmanagedCallersOnly]
-        public static unsafe void TestFnPtrWithArgs(delegate* unmanaged[MemberFunction]<int, double> fn_from_cpp)
+        public static unsafe void TestFnPtrWithArgs(delegate* unmanaged<int, double> fn_from_cpp)
         {
             Console.WriteLine($"[C#] Preparing to call c++ function");
             double ret = fn_from_cpp(20);
