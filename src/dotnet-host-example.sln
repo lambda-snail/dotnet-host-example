@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNetLib", "DotNetLib\DotN
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{91651AB7-F670-48A0-8681-8167891611A8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NativeHost.Run", "NativeHost.Run\NativeHost.Run.csproj", "{0A829E27-48E8-4A1E-BD69-74A2DCFC87C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NativeHost", "NativeHost\NativeHost.csproj", "{0A829E27-48E8-4A1E-BD69-74A2DCFC87C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
