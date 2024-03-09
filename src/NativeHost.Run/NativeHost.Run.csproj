@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>NativeHost</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,10 +20,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
-    <Content Include="include/*.*">
+    <NativeSource Include="nativehost.cpp" >
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
-    </Content>
+    </NativeSource>
   </ItemGroup>
 
   <PropertyGroup>
@@ -41,7 +42,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <NativeSource Include="nativehost.cpp" />
     <Clean Include="$(NativeBinDir)/$(NativeOutputName).*" />
     <Clean Include="$(NativeObjDir)/*.*" />
   </ItemGroup>
