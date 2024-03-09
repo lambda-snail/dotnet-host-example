@@ -57,14 +57,14 @@ namespace
     bool load_hostfxr(const char_t *app);
     load_assembly_and_get_function_pointer_fn get_dotnet_load_assembly(const char_t *assembly);
 
-    int run_component_example(const string_t& root_path);
-    int run_app_example(const string_t& root_path);
+    int32_t run_component_example(const string_t& root_path);
+    int32_t run_app_example(const string_t& root_path);
 }
 
 #if defined(WINDOWS)
-int __cdecl wmain(int argc, wchar_t *argv[])
+int32_t __cdecl wmain(int32_t argc, wchar_t *argv[])
 #else
-int main(int argc, char *argv[])
+int32_t main(int32_t argc, char *argv[])
 #endif
 {
     // Get the current executable's directory
@@ -136,15 +136,15 @@ namespace
         //callback(&fn.target); // Does not work
     }
 
-    double test_fn_arumgents_and_returns(int i)
+    double test_fn_arumgents_and_returns(int32_t i)
     {
         std::cout << "[C++] Recieved " << i << " from dotnet!" << std::endl;
-        return static_cast<double>(i) + .5;
+        return static_cast<double_t>(i) + .5;
     }
 
     void pass_fnptr_to_dotnet_witharguments(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, const string_t dotnetlib_path, const char_t* dotnet_type, int& rc)
     {
-        typedef void (CORECLR_DELEGATE_CALLTYPE *send_callback_to_dotnet_fn)(double(*fn)(int));
+        typedef void (CORECLR_DELEGATE_CALLTYPE *send_callback_to_dotnet_fn)(double_t(*fn)(int32_t));
         send_callback_to_dotnet_fn callback;
         rc = load_assembly_and_get_function_pointer(
             dotnetlib_path.c_str(),
@@ -156,17 +156,17 @@ namespace
         assert(callback, "Unable to load function TestFnPtrWithArgs");
 
         // We can use a pointer to a function defined elsewhere 
-        //callback(&test_fn_arumgents_and_returns);
+        // callback(&test_fn_arumgents_and_returns);
         
-        auto fn = [](int i) -> double
+        auto fn = [](int32_t i) -> double_t
         {
             std::cout << "[C++] A lambda recieved " << i << " from dotnet!" << std::endl;
-            return static_cast<double>(i) + 3.14;
+            return static_cast<double_t>(i) + 3.14;
         }; 
         callback(fn);
     }
     
-    int run_component_example(const string_t& root_path)
+    int32_t run_component_example(const string_t& root_path)
     {
         //
         // STEP 1: Load HostFxr and get exported hosting functions
@@ -196,7 +196,7 @@ namespace
         // <SnippetLoadAndGet>
         // Function pointer to managed delegate
         component_entry_point_fn hello = nullptr;
-        int rc = load_assembly_and_get_function_pointer(
+        int32_t rc = load_assembly_and_get_function_pointer(
             dotnetlib_path.c_str(),
             dotnet_type,
             dotnet_type_method,
@@ -212,10 +212,10 @@ namespace
         struct lib_args
         {
             const char_t *message;
-            int number;
+            int32_t number;
         };
         
-        for (int i = 0; i < 3; ++i)
+        for (int32_t i = 0; i < 3; ++i)
         {
             // <SnippetCallManaged>
             lib_args args
@@ -314,7 +314,7 @@ namespace
         // Pre-allocate a large buffer for the path to hostfxr
         char_t buffer[MAX_PATH];
         size_t buffer_size = sizeof(buffer) / sizeof(char_t);
-        int rc = get_hostfxr_path(buffer, &buffer_size, &params);
+        int32_t rc = get_hostfxr_path(buffer, &buffer_size, &params);
         if (rc != 0)
             return false;
 
@@ -337,7 +337,7 @@ namespace
         // Load .NET Core
         void *load_assembly_and_get_function_pointer = nullptr;
         hostfxr_handle cxt = nullptr;
-        int rc = init_for_config_fptr(config_path, nullptr, &cxt);
+        int32_t rc = init_for_config_fptr(config_path, nullptr, &cxt);
         if (rc != 0 || cxt == nullptr)
         {
             std::cerr << "Init failed: " << std::hex << std::showbase << rc << std::endl;
