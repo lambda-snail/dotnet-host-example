@@ -1,18 +1,13 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
+// Based on nativehost.cpp from the dotnet samples repository: https://github.com/dotnet/samples/tree/main/core/hosting
 
 // Standard headers
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
 #include <cassert>
-#include <chrono>
 #include <iostream>
 #include <thread>
 
-#include <vector>
 #include <functional>
 
 // Header files copied from https://github.com/dotnet/core-setup
@@ -26,8 +21,6 @@
 #define STR(s) L ## s
 #define CH(c) L ## c
 #define DIR_SEPARATOR L'\\'
-
-#define string_compare wcscmp
 
 #else
 #include <dlfcn.h>
@@ -70,7 +63,7 @@ int32_t main(int32_t argc, char *argv[])
     // This sample assumes the managed assembly to load and its runtime configuration file are next to the host
     char_t host_path[MAX_PATH];
 #if _WIN32
-    auto size = ::GetFullPathNameW(argv[0], sizeof(host_path) / sizeof(char_t), host_path, nullptr);
+    auto const size = ::GetFullPathNameW(argv[0], sizeof(host_path) / sizeof(char_t), host_path, nullptr);
     assert(size != 0);
 #else
     auto resolved = realpath(argv[0], host_path);
@@ -78,7 +71,7 @@ int32_t main(int32_t argc, char *argv[])
 #endif
 
     string_t root_path = host_path;
-    auto pos = root_path.find_last_of(DIR_SEPARATOR);
+    auto const pos = root_path.find_last_of(DIR_SEPARATOR);
     assert(pos != string_t::npos);
     root_path = root_path.substr(0, pos + 1);
 
@@ -102,7 +95,7 @@ namespace
     //         public static unsafe void TestFnPtr(delegate*<void> fn_from_cpp)
     // and it can be called like this: 
     //         fn_from_cpp();
-    void pass_fnptr_to_dotnet(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, string_t const dotnetlib_path, char_t const* dotnet_type, int& rc)
+    void pass_fnptr_to_dotnet(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, string_t const& dotnetlib_path, char_t const* dotnet_type, int& rc)
     {
         typedef void (CORECLR_DELEGATE_CALLTYPE *send_callback_to_dotnet_fn)(void(*fn)());
         send_callback_to_dotnet_fn callback;
@@ -113,7 +106,7 @@ namespace
             UNMANAGEDCALLERSONLY_METHOD,
             nullptr,
             (void**)&callback);
-        assert(callback, "Unable to load function TestFnPtr");
+        assert(callback && "Unable to load function TestFnPtr");
 
         // We can use a pointer to a function defined elsewhere 
         callback(&test_fn);
@@ -147,7 +140,7 @@ namespace
             UNMANAGEDCALLERSONLY_METHOD,
             nullptr,
             (void**)&callback);
-        assert(callback, "Unable to load function TestFnPtrWithArgs");
+        assert(callback && "Unable to load function TestFnPtrWithArgs");
 
         // We can use a pointer to a function defined elsewhere 
         // callback(&test_fn_arumgents_and_returns);
@@ -184,9 +177,9 @@ namespace
         //
         // STEP 3: Load managed assembly and get function pointer to a managed method
         //
-        const string_t dotnetlib_path = root_path + STR("DotNetLib.dll");
-        const char_t *dotnet_type = STR("DotNetLib.Lib, DotNetLib");
-        const char_t *dotnet_type_method = STR("Hello");
+        string_t const dotnetlib_path = root_path + STR("DotNetLib.dll");
+        char_t const *dotnet_type = STR("DotNetLib.Lib, DotNetLib");
+        char_t const *dotnet_type_method = STR("Hello");
         // Function pointer to managed delegate
         component_entry_point_fn hello = nullptr;
         int32_t rc = load_assembly_and_get_function_pointer(
@@ -203,7 +196,7 @@ namespace
         //
         struct lib_args
         {
-            const char_t *message;
+            char_t const* message;
             int32_t number;
         };
         
@@ -293,7 +286,7 @@ namespace
         static_assert(std::is_pointer_v<T>);
         
 #ifdef _WIN32
-        void *f = ::GetProcAddress((HMODULE)h, name);
+        void *f = ::GetProcAddress(static_cast<HMODULE>(h), name);
 #else
         void *f = dlsym(h, name);
 #endif
@@ -309,7 +302,7 @@ namespace
         // Pre-allocate a large buffer for the path to hostfxr
         char_t buffer[MAX_PATH];
         size_t buffer_size = sizeof(buffer) / sizeof(char_t);
-        int32_t rc = get_hostfxr_path(buffer, &buffer_size, &params);
+        int32_t const rc = get_hostfxr_path(buffer, &buffer_size, &params);
         if (rc != 0)
             return false;
 
