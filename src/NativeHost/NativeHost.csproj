@@ -15,11 +15,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
-    <Content Include="inc/*.*">
+    <Content Include="include/*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
-    <Content Include="inc.vs/*.*">
+    <Content Include="include/*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
@@ -78,7 +78,7 @@
           DependsOnTargets="PrepareForNativeBuild"
           Condition="$([MSBuild]::IsOsPlatform('Linux')) OR $([MSBuild]::IsOsPlatform('OSX'))">
     <PropertyGroup>
-      <IncPaths>-I$(NativeHostDirectory)inc -I&quot;$(NetHostDir)&quot;</IncPaths>
+      <IncPaths>-I$(NativeHostDirectory)include -I&quot;$(NetHostDir)&quot;</IncPaths>
       <CompilerArgs>-g</CompilerArgs>
     </PropertyGroup>
     <PropertyGroup Condition="$([MSBuild]::IsOsPlatform('Linux'))">

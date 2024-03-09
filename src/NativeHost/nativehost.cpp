@@ -11,14 +11,14 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
-#include <vector>
 
-#include <nethost.h>
+#include <vector>
+#include <functional>
 
 // Header files copied from https://github.com/dotnet/core-setup
 #include <coreclr_delegates.h>
-#include <functional>
 #include <hostfxr.h>
+#include <nethost.h>
 
 #ifdef WINDOWS
 #include <Windows.h>
