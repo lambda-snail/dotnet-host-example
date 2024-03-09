@@ -266,7 +266,9 @@ namespace
 {
     // Forward declarations
     void *load_library(char_t const*);
-    void *get_export(void *, char const*);
+
+    template<typename T>
+    T get_export(void *, char const*);
 
 #ifdef _WIN32
     void *load_library(char_t const* path)
@@ -275,12 +277,14 @@ namespace
         assert(h != nullptr);
         return (void*)h;
     }
-    void *get_export(void *h, char const* name)
-    {
-        void *f = ::GetProcAddress((HMODULE)h, name);
-        assert(f != nullptr);
-        return f;
-    }
+
+    // template<typename T>
+    // T* get_export(void *h, char const* name)
+    // {
+    //     void *f = ::GetProcAddress((HMODULE)h, name);
+    //     assert(f != nullptr);
+    //     return static_cast<T*>(f);
+    // }
 #else
     void *load_library(char_t const* path)
     {
@@ -288,13 +292,28 @@ namespace
         assert(h != nullptr);
         return h;
     }
-    void *get_export(void *h, char const* name)
-    {
-        void *f = dlsym(h, name);
-        assert(f != nullptr);
-        return f;
-    }
+    // void *get_export(void *h, char const* name)
+    // {
+    //     void *f = dlsym(h, name);
+    //     assert(f != nullptr);
+    //     return f;
+    // }
 #endif
+
+    template<typename T>
+    T get_export(void *h, char const* name)
+    {
+        static_assert(std::is_pointer_v<T>);
+        
+#ifdef _WIN32
+        void *f = ::GetProcAddress((HMODULE)h, name);
+#else
+        void *f = dlsym(h, name);
+#endif
+        assert(f != nullptr);
+        return static_cast<T>(f);
+    }
+
     
     // Using the nethost library, discover the location of hostfxr and get exports
     bool load_hostfxr(char_t const* assembly_path)
@@ -309,11 +328,11 @@ namespace
 
         // Load hostfxr and get desired exports
         void *lib = load_library(buffer);
-        init_for_cmd_line_fptr = (hostfxr_initialize_for_dotnet_command_line_fn)get_export(lib, "hostfxr_initialize_for_dotnet_command_line");
-        init_for_config_fptr = (hostfxr_initialize_for_runtime_config_fn)get_export(lib, "hostfxr_initialize_for_runtime_config");
-        get_delegate_fptr = (hostfxr_get_runtime_delegate_fn)get_export(lib, "hostfxr_get_runtime_delegate");
-        run_app_fptr = (hostfxr_run_app_fn)get_export(lib, "hostfxr_run_app");
-        close_fptr = (hostfxr_close_fn)get_export(lib, "hostfxr_close");
+        init_for_cmd_line_fptr  = get_export<hostfxr_initialize_for_dotnet_command_line_fn>(lib, "hostfxr_initialize_for_dotnet_command_line");
+        init_for_config_fptr    = get_export<hostfxr_initialize_for_runtime_config_fn>(lib, "hostfxr_initialize_for_runtime_config");
+        get_delegate_fptr       = get_export<hostfxr_get_runtime_delegate_fn>(lib, "hostfxr_get_runtime_delegate");
+        run_app_fptr            = get_export<hostfxr_run_app_fn>(lib, "hostfxr_run_app");
+        close_fptr              = get_export<hostfxr_close_fn>(lib, "hostfxr_close");
 
         return (init_for_config_fptr && get_delegate_fptr && close_fptr);
     }
