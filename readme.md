@@ -114,7 +114,7 @@ public static unsafe void TestStringInputOutput(delegate* unmanaged<IntPtr, IntP
 ```
 
 First we prepare a string for sending to the native code by calling either `Marshal.StringToCoTaskMemUni` or `Marshal.StringToCoTaskMemUTF8`
-depending on whether we are on Windows or not. We then send this string to the native host using hte provided callback.
+depending on whether we are on Windows or not. We then send this string to the native host using the provided callback.
 
 In the next step we receive a string from the native host, which we convert to something that dotnet can understand, again depending on
 which operating system we are on. Finally we write this string to output. In the console we should see something like this:
