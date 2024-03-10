@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Text.Unicode;
 
+[module: System.Runtime.InteropServices.DefaultCharSet( CharSet.Unicode )]
 namespace DotNetLib
 {
     public static class Lib
@@ -37,9 +39,28 @@ namespace DotNetLib
         [UnmanagedCallersOnly]
         public static unsafe void TestFnPtrWithArgs(delegate* unmanaged<int, double> fn_from_cpp)
         {
-            Console.WriteLine($"[C#] Preparing to call c++ function");
+            Console.WriteLine($"[C#] Entering {nameof(TestFnPtrWithArgs)}");
             double ret = fn_from_cpp(20);
             Console.WriteLine($"[C#] C++ function returned {ret}!");
+        }
+
+        [UnmanagedCallersOnly]
+        public static unsafe void TestStringInputOutput(delegate* unmanaged<IntPtr, IntPtr> str_fn)
+        {
+            Console.WriteLine($"[C#] Entering {nameof(TestStringInputOutput)}");
+
+            string str_from_cs = "String from c#";
+            IntPtr cpp_str = str_fn(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                                        ? Marshal.StringToCoTaskMemUni(str_from_cs)
+                                        : Marshal.StringToCoTaskMemUTF8(str_from_cs));
+            
+            
+            
+            string cs_str = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? Marshal.PtrToStringUni(cpp_str)
+                : Marshal.PtrToStringUTF8(cpp_str);
+            
+            Console.WriteLine($"[C#] String from c++: {cs_str}");
         }
         
         public delegate void CustomEntryPointDelegate(LibArgs libArgs);

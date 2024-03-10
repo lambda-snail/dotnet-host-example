@@ -152,6 +152,32 @@ namespace
         }; 
         callback(fn);
     }
+
+    // Example of how to send and receive a string to/from c#.
+    // The corresponding function in c# has the following signature:
+    //      public static unsafe void TestStringInputOutput(delegate* unmanaged<IntPtr, IntPtr> str_fn)
+    //
+    // THe IntPtr should be Marshalled differently depending on if you are on Linux or Windows, as the character types
+    // may have different sizes on different systems. See https://learn.microsoft.com/en-us/dotnet/standard/native-interop/charset. 
+    void pass_fnptr_with_strings(load_assembly_and_get_function_pointer_fn load_assembly_and_get_function_pointer, string_t const dotnetlib_path, char_t const* dotnet_type, int& rc)
+    {
+        typedef void (CORECLR_DELEGATE_CALLTYPE *send_callback_to_dotnet_fn)(wchar_t const*(*fn)(wchar_t const*));
+        send_callback_to_dotnet_fn callback;
+        rc = load_assembly_and_get_function_pointer(
+            dotnetlib_path.c_str(),
+            dotnet_type,
+            STR("TestStringInputOutput"),
+            UNMANAGEDCALLERSONLY_METHOD,
+            nullptr,
+            (void**)&callback);
+        assert(callback && "Unable to load function TestStringInputOutput");
+        
+        callback( [](wchar_t const* str) -> wchar_t const*
+        {
+            std::wcout << STR("[C++] C# sent the following string: ") << str << std::endl;
+            return STR("This string is from c++ :)");
+        }); 
+    }
     
     int32_t run_component_example(string_t const& root_path)
     {
@@ -245,6 +271,7 @@ namespace
         // Demonstrates how to consume c++ code from dotnet by passing a ptr to a function
         pass_fnptr_to_dotnet(load_assembly_and_get_function_pointer, dotnetlib_path, dotnet_type, rc);
         pass_fnptr_to_dotnet_witharguments(load_assembly_and_get_function_pointer, dotnetlib_path, dotnet_type, rc);
+        pass_fnptr_with_strings(load_assembly_and_get_function_pointer, dotnetlib_path, dotnet_type, rc);
         
         return EXIT_SUCCESS;
     }

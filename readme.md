@@ -80,6 +80,90 @@ callback(fn);
 
 That's it, we now know how to expose functions for consumption by the hosted dotnet runtime!
 
+## Marshalling Strings
+
+There ample is documentation on how to handle string types when doing a P/Invoke, however I couldn't find anything that mentions
+the case of a native host calling functions directly or exposing functionality via function pointers like we are doing here. Luckily it 
+seems the same principles apply in our case as well! 
+
+The signature of the method in c# would be the following:
+
+```csharp
+delegate* unmanaged<IntPtr, IntPtr> str_fn
+```
+
+And the entire method in the test application looks like this:
+
+```csharp
+[UnmanagedCallersOnly]
+public static unsafe void TestStringInputOutput(delegate* unmanaged<IntPtr, IntPtr> str_fn)
+{
+    Console.WriteLine($"[C#] Entering {nameof(TestStringInputOutput)}");
+
+    string str_from_cs = "String from c#";
+    IntPtr cpp_str = str_fn(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                                ? Marshal.StringToCoTaskMemUni(str_from_cs)
+                                : Marshal.StringToCoTaskMemUTF8(str_from_cs));
+    
+    string cs_str = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+        ? Marshal.PtrToStringUni(cpp_str)
+        : Marshal.PtrToStringUTF8(cpp_str);
+    
+    Console.WriteLine($"[C#] String from c++: {cs_str}");
+}
+```
+
+First we prepare a string for sending to the native code by calling either `Marshal.StringToCoTaskMemUni` or `Marshal.StringToCoTaskMemUTF8`
+depending on whether we are on Windows or not. We then send this string to the native host using hte provided callback.
+
+In the next step we receive a string from the native host, which we convert to something that dotnet can understand, again depending on
+which operating system we are on. Finally we write this string to output. In the console we should see something like this:
+
+```
+[C#] Entering TestStringInputOutput                           
+[C++] C# sent the following string: String from c#            
+[C#] String from c++: This string is from c++ :)  
+```
+
+We may need to think about the character set that we are using, which is described in more detail [here](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/charset).
+To this end I added the following attribute to the c# code:
+
+```csharp
+[module: System.Runtime.InteropServices.DefaultCharSet( CharSet.Unicode )]
+```
+
+If the strings show up as empty when printing, we can play around with this and the types that we use on the c++ side as well.
+
+An interesting thing that I noticed was that I could send (but not receive) "raw" strings to c++ using the following signature:
+
+```csharp
+delegate* unmanaged<string, IntPtr> str_fn
+```
+
+To properly receive this in c++ I had to accept it as a `char const*` instead of a `wchar_t const*`:
+
+```cpp
+callback( [](char const* str) -> wchar_t const*
+{
+    std::cout << "[C++] C# sent the following string: " << str << std::endl;
+    return STR("This string is from c++ :)");
+});
+```
+
+Not sure to what extent this would work however or what the best practices are here. Do we always use the `Marshal` class 
+to prepare ou strings for interop, or are there some scenarios where it is OK to pass "raw" strings like this?
+
+### Functions for String Marshalling
+
+There are many methods available in the `Marshal` class, but in this example we have used the following ones.
+
+| c# => c++          | c# <= c++                                    |
+|--------------------|----------------------------------------------|
+| `PtrToStringUni`   | `StringToCoTaskMemUni`, `StringToHGlobalUni` |
+| `PtrToStringUTF8`  | `StringToCoTaskMemUTF8`                      |
+
+Not quite sure what the difference between `StringToHGlobalUni` and `StringToCoTaskMemUni` is - both are listed as the inverse of 
+`PtrToStringUni` in the [documentation](https://learn.microsoft.com/en-us/dotnet/api/System.Runtime.InteropServices.Marshal.PtrToStringUni?view=net-6.0)
 
 # Limitations
 
