@@ -86,7 +86,7 @@ There ample is documentation on how to handle string types when doing a P/Invoke
 the case of a native host calling functions directly or exposing functionality via function pointers like we are doing here. Luckily it 
 seems the same principles apply in our case as well! 
 
-The signature of the method in c# would be the following:
+The signature of a method in c# to send and receive a string would be the following:
 
 ```csharp
 delegate* unmanaged<IntPtr, IntPtr> str_fn
