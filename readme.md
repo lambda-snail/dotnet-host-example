@@ -151,7 +151,7 @@ callback( [](char const* str) -> wchar_t const*
 ```
 
 Not sure to what extent this would work however or what the best practices are here. Do we always use the `Marshal` class 
-to prepare ou strings for interop, or are there some scenarios where it is OK to pass "raw" strings like this?
+to prepare our strings for interop, or are there some scenarios where it is OK to pass "raw" strings like this?
 
 ### Functions for String Marshalling
 
