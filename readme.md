@@ -61,7 +61,7 @@ rc = load_assembly_and_get_function_pointer(
     (void**)&callback);
 ```
 
-Now we can either give the c# code a pointer to a function or member variable:
+Now we can either give the c# code a pointer to a free function:
 
 ```c++
 callback(&test_fn_arumgents_and_returns);

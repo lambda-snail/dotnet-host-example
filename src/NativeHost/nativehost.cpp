@@ -86,7 +86,7 @@ namespace
         std::cout << "[C++] In c++ again!" << std::endl;
     }
     
-    // So we can pass a lambda or a function ptr to a c++ function or member function for consumption
+    // So we can pass a lambda or a function ptr to a free c++ function for consumption
     // by the hosted dotnet code
     // However, we cannot use std::function it appears (which would be prefferable) ...
     //
