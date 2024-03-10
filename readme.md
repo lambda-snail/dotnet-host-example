@@ -157,10 +157,10 @@ to prepare our strings for interop, or are there some scenarios where it is OK t
 
 There are many methods available in the `Marshal` class, but in this example we have used the following ones.
 
-| c# => c++          | c# <= c++                                    |
-|--------------------|----------------------------------------------|
-| `PtrToStringUni`   | `StringToCoTaskMemUni`, `StringToHGlobalUni` |
-| `PtrToStringUTF8`  | `StringToCoTaskMemUTF8`                      |
+| c# <= c++         | c# => c++                                    |
+|-------------------|----------------------------------------------|
+| `PtrToStringUni`  | `StringToCoTaskMemUni`, `StringToHGlobalUni` |
+| `PtrToStringUTF8` | `StringToCoTaskMemUTF8`                      |
 
 Not quite sure what the difference between `StringToHGlobalUni` and `StringToCoTaskMemUni` is - both are listed as the inverse of 
 `PtrToStringUni` in the [documentation](https://learn.microsoft.com/en-us/dotnet/api/System.Runtime.InteropServices.Marshal.PtrToStringUni?view=net-6.0)
