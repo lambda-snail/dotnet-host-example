@@ -3,10 +3,15 @@
 A small repository to test out some scenarios related to writing a custom dotnet host in c++. There is an [official article](https://learn.microsoft.com/en-us/dotnet/core/tutorials/netcore-hosting)
 about how to make a dotnet host using the `nethost` api, that comes with a [sample repository](https://github.com/dotnet/samples/tree/main/core/hosting) in github.
 
-However, this project is very complicated and did not work well for me using Rider. Moreover it only contains examples of simple operations
-such as loading the relevant dll's and calling a simple function.
+However, the sample project did not contain an example of the scenario that I was interested in, and I had some trouble making it work with Rider.
 
-This repository is an attempt to reduce the complexity of the example slightly, make it work with Rider and add more examples for my own reference.
+This repository is an attempt to make the example work with Rider and add more examples for my own reference. I have also taken the liberty to attempt to address 
+some of the warnings that clang-tidy gives.
+
+# Documentation
+
+I haven't found any real documentation on this topic, apart from the article on MS Learn and the sample repository. There is also this [design document](https://github.com/dotnet/runtime/blob/main/docs/design/features/native-hosting.md)
+on the native hosting feature that seems to document the functions used in the sample.
 
 # How to Run
 
@@ -14,7 +19,7 @@ All compilation and running is through the project called `NativeHost` that show
 
 # Added Examples
 
-## Hosted Code Calling Functions Exposed by the Host
+## Native Host Exposing Functions to Managed Assembly
 
 I was mainly interested in how to make the hosted c# code call back into the host. A reply on [this](https://github.com/dotnet/runtime/issues/41319) github issue
 suggested that you can do this by passing in a function pointer, without using the `Marshal.GetDelegateForFunctionPointer` that shows up if you google the topic.
@@ -73,7 +78,7 @@ auto fn = [](int32_t i) -> double_t
 callback(fn);
 ```
 
-That's it, we now know how to expose functions for consumption by the hosted dotnet runtime. It was a bit surprising that the documentation doesn't say anything about this (at least as far as I can tell), but maybe it's just me who cannot read.
+That's it, we now know how to expose functions for consumption by the hosted dotnet runtime!
 
 
 # Limitations
@@ -92,9 +97,8 @@ can remove all the "solution"-related things and convert it to using CMake.
 This project is licensed under the MIT license. It contains modified code from the official dotnet samples repository found here:
 https://github.com/dotnet/samples/tree/main/core/hosting
 
-# Interesting Links
+# Further Reading
 
-Other sites that could be of interest when researching this topic:
-
+- https://github.com/dotnet/runtime/blob/main/docs/design/features/native-hosting.md
 - https://github.com/KevinGliewe/embedded_dotnet_runtime_examples
 - https://github.com/AaronRobinsonMSFT/DNNE/tree/master
