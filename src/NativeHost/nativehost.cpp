@@ -79,6 +79,13 @@ int32_t main(int32_t argc, char *argv[])
     return run_component_example(root_path);
 }
 
+// https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
+// https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke
+extern "C" __declspec(dllexport) void CodeInCpp()
+{
+    std::cout << "CodeInCpp" << std::endl;
+}
+
 namespace
 {
     void test_fn()

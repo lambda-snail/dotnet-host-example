@@ -1,12 +1,49 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Unicode;
 
 [module: System.Runtime.InteropServices.DefaultCharSet( CharSet.Unicode )]
+
+namespace LambdaSnail.UnrealSharp
+{
+    public abstract class Actor
+    {
+        public abstract void Tick(float deltaTime);
+    }
+    
+    public static class ActorManager
+    {
+        private static List<Actor> Actors { get; set; }
+        
+        //[UnmanagedCallersOnly]
+        public static int InitActorManager(IntPtr arg, int argLength)
+        {
+            Console.WriteLine($"Init has been called!");
+            Actors = new();
+
+            return 0;
+        }
+    }
+}
+
 namespace DotNetLib
 {
-    public static class Lib
+    public static partial class Lib
     {
+        static Lib()
+        {
+            NativeLibrary.SetDllImportResolver(Assembly.GetAssembly(typeof(Lib))!, (name, _, paths) =>
+            {
+                if (name == "__Internal")
+                {
+                    return NativeLibrary.GetMainProgramHandle(); // After dotnet 7, https://github.com/dotnet/runtime/issues/56331
+                }
+                return IntPtr.Zero;
+            });
+        }
+        
         private static int s_CallCount = 1;
 
         [StructLayout(LayoutKind.Sequential)]
@@ -70,11 +107,17 @@ namespace DotNetLib
             PrintLibArgs(libArgs);
         }
 
+        //[DllImport("__Internal")]
+        [LibraryImport("__Internal", EntryPoint = "CodeInCpp")]
+        private static partial /*extern*/ void CodeInCpp();
+        
         [UnmanagedCallersOnly]
         public static void CustomEntryPointUnmanagedCallersOnly(LibArgs libArgs)
         {
             Console.WriteLine($"Hello, world! from {nameof(CustomEntryPointUnmanagedCallersOnly)} in {nameof(Lib)}");
             PrintLibArgs(libArgs);
+
+            CodeInCpp();
         }
 
         private static void PrintLibArgs(LibArgs libArgs)
