@@ -5,24 +5,41 @@ about how to make a dotnet host using the `nethost` api, that comes with a [samp
 
 However, the sample project did not contain an example of the scenario that I was interested in, and I had some trouble making it work with Rider.
 
+There is ample documentation on how to call native code from C#, however I have found little information about calling functions in the host in a 
+native hosting scenario. If I host a dotnet runtime in my program, that is probably because I wish to script parts of that program, which makes it 
+natural to assume that I also want to call functions and send data back and forth. The current sample project and documentation did not explain how
+to call C++ functions in the host program from the hosted dotnet.
+
 This repository is an attempt to make the example work with Rider and add more examples for my own reference. I have also taken the liberty to attempt to address 
 some of the warnings that clang-tidy gives.
+
+### Disclaimer
+
+The purpose of this repository is to provide some hands-on examples and gather some links to relevant documentation. It is _not_ a demonstration of best practices,
+nor a demonstration of how to create pretty code. Feel free to use this code however you wish, but let's be responsible with random code that we find on the internet :) 
+
 
 # Documentation
 
 I haven't found any real documentation on this topic, apart from the article on MS Learn and the sample repository. There is also this [design document](https://github.com/dotnet/runtime/blob/main/docs/design/features/native-hosting.md)
 on the native hosting feature that seems to document the functions used in the sample.
 
+To invoke functions provided by the host there seem to be basically two ways to go (that I'm aware of):
+
+1. Provide function pointers to dotnet that expose the desired functionality. This was outlined in the discussion [here](https://github.com/dotnet/runtime/issues/41319).
+2. Declare functions with internal linkage (`__Internal`) and do a P/Invoke into the host binary. See the discussions in [this](https://github.com/dotnet/runtime/issues/7267) 
+and then [this](https://github.com/dotnet/runtime/issues/56331) github issue.
+
 # How to Run
 
 All compilation and running is through the project called `NativeHost` that shows up as a c# project in Rider.
 
-# Added Examples
+# Provide Function Pointers to Hosted Dotnet Code
 
 ## Native Host Exposing Functions to Managed Assembly
 
-I was mainly interested in how to make the hosted c# code call back into the host. A reply on [this](https://github.com/dotnet/runtime/issues/41319) github issue
-suggested that you can do this by passing in a function pointer, without using the `Marshal.GetDelegateForFunctionPointer` that shows up if you google the topic.
+I got this idead from a reply on [this](https://github.com/dotnet/runtime/issues/41319) github issue, that suggested that you can do this by passing in a function pointer,
+without using the `Marshal.GetDelegateForFunctionPointer` that shows up if you google the topic.
 
 In short, this can be achieved by declaring a method like so in c#:
 
@@ -142,7 +159,7 @@ delegate* unmanaged<string, IntPtr> str_fn
 
 To properly receive this in c++ I had to accept it as a `char const*` instead of a `wchar_t const*`:
 
-```cpp
+```c++
 callback( [](char const* str) -> wchar_t const*
 {
     std::cout << "[C++] C# sent the following string: " << str << std::endl;
@@ -165,6 +182,146 @@ There are many methods available in the `Marshal` class, but in this example we 
 Not quite sure what the difference between `StringToHGlobalUni` and `StringToCoTaskMemUni` is - both are listed as the inverse of 
 `PtrToStringUni` in the [documentation](https://learn.microsoft.com/en-us/dotnet/api/System.Runtime.InteropServices.Marshal.PtrToStringUni?view=net-6.0)
 
+# P/Invoke With Internal Linkage
+
+I'm not sure if "internal linkage" is the correct technical term here, but hopefully the reader understands what I mean. It refers to
+registering a function that can be found in the binary/dll of the host, and then making a P/Invoke.
+
+Funnily enough, I got this idea from studying the [Mono documentation](https://www.mono-project.com/docs/advanced/embedding/) about embedding, which I find is not too bad, actually.
+This lead to the question of how this can be done in dotnet core, and [this](https://github.com/dotnet/runtime/issues/7267) github issue. It turns out that we can now do the same thing in
+dotnet core.
+
+## P/Invoke - Quick Start Guide
+
+To begin we first create a function with the desired functionality in C++:
+
+```c++
+extern "C" __declspec(dllexport) void print_simple_message() {...}
+```
+
+In C# we can then declare a method with the same return value and parameters. We then decorate it with the `DllImport` attribute
+and specify `__Internal` as the library name:
+
+```csharp
+[DllImport("__Internal", EntryPoint = "print_simple_message")]
+private static extern void PrintSimpleMessage();
+```
+
+This will require us to write some additional code as well for marshalling parameters etc. However, from dotnet 7.0 we can take
+advantage of [source generators](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation) to generate the marshalling code.
+Doing this will change the method definition slightly:
+
+```csharp
+[LibraryImport("__Internal", EntryPoint = "print_simple_message")]
+private static partial void PrintSimpleMessage();
+```
+
+We now use the attribute `LibraryImport` and we also need to make the method `partial` so that the source generators can do their thing.
+When testing I also ran into the error `SYSLIB1051` which was solved by adding the following attribute to the assembly:
+
+```csharp
+[assembly: System.Runtime.CompilerServices.DisableRuntimeMarshallingAttribute]
+```
+
+# More on P/Invoke
+
+The example code in `nativehost.cpp` contains a few examples of functions that receive data from dotnet and perform some logic (represented by print statements in the example).
+The reader should hopefully be able to figure out how to adapt them to his/her own project.
+
+The examples show how to deal with simple parameters, which is easy to set up thanks to the source generators - we almost don't need to do any thinking at all.
+I have also included an example of a struct parameter:
+
+```c++
+struct ComplicatedParamStruct
+{
+    int SomeOption;
+    double ValueOfOption;
+    bool DoComplicatedThingy;
+};
+```
+
+This can be received from dotnet either as a pointer, reference or by copying:
+
+```c++
+extern "C" __declspec(dllexport) void print_struct_pointer(ComplicatedParamStruct* params);
+extern "C" __declspec(dllexport) void print_struct_reference(ComplicatedParamStruct& params);
+extern "C" __declspec(dllexport) void print_struct_copy(ComplicatedParamStruct params);
+```
+
+To make this work in C# we need the corresponding struct definition:
+
+```csharp
+[StructLayout(LayoutKind.Sequential)]
+struct ComplicatedParamStruct
+{
+    public int SomeOption { get; set; }
+    public double ValueOfOption { get; set; }
+    public bool DoComplicatedThingy { get; set; }
+};
+```
+
+as well as the method definitions:
+
+```csharp
+[LibraryImport("__Internal", EntryPoint = "print_struct_pointer")]
+private static partial void PrintStructPointer(ref ComplicatedParamStruct @params);
+
+[LibraryImport("__Internal", EntryPoint = "print_struct_copy")]
+private static partial void PrintStructCopy(ComplicatedParamStruct @params);
+
+[LibraryImport("__Internal", EntryPoint = "print_struct_reference")]
+private static partial void PrintStructReference(ref ComplicatedParamStruct @params);
+```
+
+Note that the parameter is declared with the `ref` keyword for both the pointer and the reference cases.
+
+# P/Invoking with Strings
+
+String may require some more consideration, but here we can also utilize the source generators to make our life easier. We start with a simple logging function:
+
+```c++
+extern "C" __declspec(dllexport) void native_log(char const* message) {...}
+```
+
+Note that the function takes a `char` and not a `char_t` (which in this project is a `char` on linux and `wchar` on windows).
+The corresponding method declaration in C# is:
+
+```csharp
+[LibraryImport("__Internal", EntryPoint = "native_log", StringMarshalling = StringMarshalling.Utf8)]
+private static partial void NativeLog(string message);
+```
+
+What is different from before is the property `StringMarshalling = StringMarshalling.Utf8`, which generates code to marshal the string as a `Utf-8` string. 
+We can also marshal as `Utf-16` or `Custom`. 
+
+We also have the possibility of using the attribute `[MarshalAs(...)]` on parameters and return type, as described [here](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation).
+
+In addition, we may define our own classes to handle the marshalling if we need to. To do this we declare a class with the following attribute:
+
+```csharp
+[CustomMarshaller(typeof(string), MarshalMode.Default, typeof(CustomMarshallerWithLibraryImport))]
+```
+
+We can then define a method for marshalling in the way we need to:
+
+```csharp
+public static UInt32* ConvertToUnmanaged(string? str)
+{
+    if (string.IsNullOrEmpty(str))
+    {
+        throw new InvalidOperationException("Unable to marshal object");
+    }
+
+    return (UInt32*)(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+        ? Marshal.StringToCoTaskMemUni(str).ToPointer()
+        : Marshal.StringToCoTaskMemUTF8(str).ToPointer());
+}
+```
+
+So depending on the OS we marshal either as `Utf-8` or `Utf-16`. There are many ways to define a custom marshaller, please refer to the [official documentation](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/custom-marshalling-source-generation) 
+and [this](https://github.com/dotnet/runtime/blob/main/docs/design/libraries/LibraryImportGenerator/UserTypeMarshallingV2.md) design document for further reading.
+
+
 # Limitations
 
 This has only been tested on Windows and Rider so far. In the future I hope to get the time to see if it runs on Linux as well. I would also like to see if I 
@@ -172,7 +329,7 @@ can remove all the "solution"-related things and convert it to using CMake.
 
 # Todo
 
-- [ ] Add more of my own examples
+- [x] Add more of my own examples
 - [ ] See if it is possible to convert to a CMake project
 - [ ] Make sure this compiles and runs on Linux
 
@@ -183,6 +340,10 @@ https://github.com/dotnet/samples/tree/main/core/hosting
 
 # Further Reading
 
-- https://github.com/dotnet/runtime/blob/main/docs/design/features/native-hosting.md
+- [Native Hosting](https://github.com/dotnet/runtime/blob/main/docs/design/features/native-hosting.md)
+- [P/Invoke Source Generation](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation)
+- [Custom Marshalling with Source Generation](https://learn.microsoft.com/en-us/dotnet/standard/native-interop/custom-marshalling-source-generation)
+- [User Type Marshalling - v2](https://github.com/dotnet/runtime/blob/main/docs/design/libraries/LibraryImportGenerator/UserTypeMarshallingV2.md)
+- 
 - https://github.com/KevinGliewe/embedded_dotnet_runtime_examples
 - https://github.com/AaronRobinsonMSFT/DNNE/tree/master

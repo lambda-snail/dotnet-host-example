@@ -127,11 +127,6 @@ extern "C" __declspec(dllexport) void print_struct_reference(ComplicatedParamStr
 // We can also take a string as a parameter! We intentionally use char instead of char_t here.
 extern "C" __declspec(dllexport) void native_log(char const* message)
 {
-// #ifdef WIN32
-//     std::wcout
-// #else
-//     std::cout
-// #endif
     std::cout << "[P/Invoke] " << message << std::endl;
 }
 
