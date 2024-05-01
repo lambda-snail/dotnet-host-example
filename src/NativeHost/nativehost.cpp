@@ -12,6 +12,7 @@
 
 // Header files copied from https://github.com/dotnet/core-setup
 #include <coreclr_delegates.h>
+#include <format>
 #include <hostfxr.h>
 #include <nethost.h>
 
@@ -81,9 +82,67 @@ int32_t main(int32_t argc, char *argv[])
 
 // https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
 // https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke
-extern "C" __declspec(dllexport) void CodeInCpp()
+extern "C" __declspec(dllexport) void print_simple_message()
 {
-    std::cout << "CodeInCpp" << std::endl;
+    static uint32_t call_count{};
+    std::cout << std::format("Hello from P/Invoke! Call count is: {}", ++call_count) << std::endl;
+}
+
+extern "C" __declspec(dllexport) void print_int(int32_t i)
+{
+    std::cout << std::format("Print int: {}", i) << std::endl;
+}
+
+extern "C" __declspec(dllexport) void print_float(float_t f)
+{
+    std::cout << std::format("Print float: {}", f) << std::endl;
+}
+
+// Demonstrate how to pass a struct
+struct ComplicatedParamStruct
+{
+    int SomeOption;
+    double ValueOfOption;
+    bool DoComplicatedThingy;
+};
+
+// We can receive data by pointer ...
+extern "C" __declspec(dllexport) void print_struct_pointer(ComplicatedParamStruct* params)
+{
+    std::cout << std::format("[By pointer] Some Option: {}, Value: {}, Should do Complicated Thingy: {}", params->SomeOption, params->ValueOfOption, params->DoComplicatedThingy) << std::endl;
+}
+
+// ... by copy ...
+extern "C" __declspec(dllexport) void print_struct_copy(ComplicatedParamStruct params)
+{
+    std::cout << std::format("[By copy] Some Option: {}, Value: {}, Should do Complicated Thingy: {}", params.SomeOption, params.ValueOfOption, params.DoComplicatedThingy) << std::endl;
+}
+
+// ... or by reference!
+extern "C" __declspec(dllexport) void print_struct_reference(ComplicatedParamStruct& params)
+{
+    std::cout << std::format("[By reference] Some Option: {}, Value: {}, Should do Complicated Thingy: {}", params.SomeOption, params.ValueOfOption, params.DoComplicatedThingy) << std::endl;
+}
+
+// We can also take a string as a parameter! We intentionally use char instead of char_t here.
+extern "C" __declspec(dllexport) void native_log(char const* message)
+{
+// #ifdef WIN32
+//     std::wcout
+// #else
+//     std::cout
+// #endif
+    std::cout << "[P/Invoke] " << message << std::endl;
+}
+
+extern "C" __declspec(dllexport) void native_log_custom_marshalling(char_t const* message)
+{
+    #ifdef WIN32
+        std::wcout
+    #else
+        std::cout
+    #endif
+    << "[P/Invoke] " << message << std::endl;
 }
 
 namespace
@@ -325,7 +384,7 @@ namespace
         void *f = dlsym(h, name);
 #endif
         assert(f != nullptr);
-        return static_cast<T>(f);
+        return reinterpret_cast<T>(f);
     }
 
     
@@ -356,7 +415,7 @@ namespace
     {
         // Load .NET Core
         void *load_assembly_and_get_function_pointer = nullptr;
-        hostfxr_handle cxt = nullptr;
+        hostfxr_handle cxt{};
         int32_t rc = init_for_config_fptr(config_path, nullptr, &cxt);
         if (rc != 0 || cxt == nullptr)
         {
@@ -374,6 +433,6 @@ namespace
             std::cerr << "Get delegate failed: " << std::hex << std::showbase << rc << std::endl;
 
         close_fptr(cxt);
-        return static_cast<load_assembly_and_get_function_pointer_fn>(load_assembly_and_get_function_pointer);
+        return reinterpret_cast<load_assembly_and_get_function_pointer_fn>(load_assembly_and_get_function_pointer);
     }
 }
