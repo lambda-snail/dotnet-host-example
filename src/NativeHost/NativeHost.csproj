@@ -106,7 +106,7 @@
     <PropertyGroup>
       <IncPaths>@(MSVCIncludePaths-> '/I &quot;%(RootDir)%(Directory)%(Filename)&quot;', ' ')</IncPaths>
       <IncPaths>$(IncPaths) /I inc /I &quot;$(NetHostDir)&quot;</IncPaths>
-      <CompilerArgs>/EHsc /Od /GS /sdl /Zi</CompilerArgs>
+      <CompilerArgs>/EHsc /Od /GS /sdl /Zi /std:c++20</CompilerArgs>
       <PreprocessorDefines>/D WINDOWS</PreprocessorDefines>
       <LibPaths>@(MSVCLibPaths-> '/LIBPATH:&quot;%(RootDir)%(Directory)%(Filename)&quot;', ' ')</LibPaths>
       <LibPaths>$(LibPaths) &quot;$(NetHostDir)\nethost.lib&quot;</LibPaths>
